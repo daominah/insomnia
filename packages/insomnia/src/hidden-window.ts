@@ -85,7 +85,7 @@ const runScript = async (
   const updatedCertificates = mergeClientCertificates(context.clientCertificates, mutatedContextObject.request);
   const updatedCookieJar = mergeCookieJar(context.cookieJar, mutatedContextObject.cookieJar);
 
-  await window.bridge.appendFile(context.timelinePath, scriptConsole.dumpLogs());
+  // await window.bridge.appendFile(context.timelinePath, scriptConsole.dumpLogs());
 
   return {
     ...context,
@@ -114,6 +114,7 @@ const runScript = async (
     cookieJar: updatedCookieJar,
     globals: mutatedContextObject.globals,
     requestTestResults: mutatedContextObject.requestTestResults,
+    logs: scriptConsole.dumpLogsAsArray(),
   };
 };
 
