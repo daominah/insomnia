@@ -999,7 +999,7 @@ const Design: FC = () => {
                   onChange={onCodeEditorChange}
                   uniquenessKey={uniquenessKey}
                 />
-                {apiSpec.contents ? null : (
+                {/* {apiSpec.contents ? null : (
                   <DesignEmptyState
                     onImport={value => {
                       updateApiSpecFetcher.submit(
@@ -1014,7 +1014,7 @@ const Design: FC = () => {
                       );
                     }}
                   />
-                )}
+                )} */}
               </div>
               <div className={`flex ${isLintPaneOpen ? '' : 'h-[--line-height-sm]'} box-border flex-col divide-y divide-solid divide-[--hl-md] overflow-hidden`}>
                 <div className="flex gap-2 items-center p-[--padding-sm]">

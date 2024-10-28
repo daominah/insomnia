@@ -12,15 +12,22 @@ import { languageId } from './languages/openapi/apidom';
 
 const getVariableHoverMessage = (name: string, value: string, source: string) => {
   const gapContent = '&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp';
-  const valueContent = `<p>Value${gapContent}${value}</p>`;
+  const valueContent = `<p>Value${gapContent} ${value}</p>`;
   const scopeContent = `<p>Source${gapContent}${source}</p>`;
   return `<div><p><strong>${name}</strong></p>${valueContent}${scopeContent}</div>`;
+};
+
+const getTagHoverMessage = (name: string, value: string) => {
+  const gapContent = '&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp';
+  const valueContent = `<p>Value${gapContent}${value}</p>`;
+  return `<div><p><strong>${name}</strong></p>${valueContent}</div>`;
 };
 
 export const CodeEditor = ({ id, readOnly, className, dynamicHeight, style, defaultValue, enableNunjucks }: any) => {
   const textAreaRef = useRef<HTMLDivElement>(null);
   const monacoEditor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const decorationsCount = useRef(0);
+  const curDecoration = useRef<monaco.editor.IEditorDecorationsCollection>();
   const [isEditorReady, setIsEditorReady] = useState(false);
   const {
     settings,
@@ -35,7 +42,8 @@ export const CodeEditor = ({ id, readOnly, className, dynamicHeight, style, defa
       value: '{\n\
     "username": "{{ _.username }}",\n\
     "password": "{{ _.password }}",\n\
-    "result": "{% base64 \'encode\', \'normal\', \'test\' %}"  hello\n\
+    "result": "{% base64 \'encode\', \'normal\', \'test\' %}"\n\
+    "timeNow": "{% now \'iso-8601\', \'\' %}"\n\
   }',
       language: languageId,
       lineNumbers: 'on',
@@ -59,8 +67,6 @@ export const CodeEditor = ({ id, readOnly, className, dynamicHeight, style, defa
     const editor = monacoEditor.current;
     if (editor) {
       const model = editor.getModel()!;
-      const existingDecorationIds = model.getAllDecorations().filter(d => d.options.inlineClassName === 'invisible-token').map(d => d.id);
-      editor.removeDecorations(existingDecorationIds);
       const renderCacheKey = Math.random() + '';
       const renderString = (text: any) => handleRender!(text, renderCacheKey);
       const getRenderContext = () => handleGetRenderContext!(renderCacheKey);
@@ -80,34 +86,63 @@ export const CodeEditor = ({ id, readOnly, className, dynamicHeight, style, defa
       //     },
       //   };
       // }
+        // return {
+        //   range: range,
+        //   options: {
+        //     inlineClassName: 'invisible-token', // Hide the braces
+        //     afterContentClassName: 'visible-token', // Show the token
+        //     ...(type === 'variable' && !dataError && {
+        //       hoverMessage: {
+        //         supportHtml: true,
+        //         value: getVariableHoverMessage(content, value, key),
+        //       },
+        //     }),
+        //     after: {
+        //       attachedData: model.getValueInRange(range),
+        //       content: !dataError ? content : cleanedStr,
+        //       inlineClassName: classnames(
+        //         'nunjucks-tag',
+        //         {
+        //           'nunjucks-variable': type === 'variable',
+        //           'nunjucks-tag-error': dataError,
+        //         }
+        //       ),
+        //       cursorStops: monaco.editor.InjectedTextCursorStops.Both,
+        //     },
+        //   },
+        // };
         return {
           range: range,
           options: {
-            inlineClassName: 'invisible-token', // Hide the braces
-            afterContentClassName: 'visible-token', // Show the token
+            inlineClassName: classnames(
+              'nunjucks-tag',
+              {
+                'nunjucks-variable': type === 'variable',
+                'nunjucks-tag-error': dataError,
+              }
+            ),
             ...(type === 'variable' && !dataError && {
               hoverMessage: {
                 supportHtml: true,
                 value: getVariableHoverMessage(content, value, key),
               },
             }),
-            after: {
-              attachedData: model.getValueInRange(range),
-              content: !dataError ? content : cleanedStr,
-              inlineClassName: classnames(
-                'nunjucks-tag',
-                {
-                  'nunjucks-variable': type === 'variable',
-                  'nunjucks-tag-error': dataError,
-                }
-              ),
-              cursorStops: monaco.editor.InjectedTextCursorStops.Both,
-            },
+            ...(type === 'tag' && !dataError && {
+              hoverMessage: {
+                supportHtml: true,
+                value: getTagHoverMessage(content, value),
+              },
+            }),
           },
         };
       }));
       // Apply the decorations
-      decorationsCount.current = editor.createDecorationsCollection(decorations).length;
+      if (!curDecoration.current) {
+        curDecoration.current = editor.createDecorationsCollection(decorations);
+      } else {
+        curDecoration.current.set(decorations);
+      }
+      decorationsCount.current = curDecoration.current.length;
       // const widgets: monaco.editor.IContentWidget[] = matches.map(({ range, token, type }, idx) => {
       //   return {
       //     getDomNode: () => {
@@ -139,35 +174,35 @@ export const CodeEditor = ({ id, readOnly, className, dynamicHeight, style, defa
     };
 
     if (editor) {
-      const model = editor.getModel()!;
-      const cursorPosition = editor.getPosition()!;
-      const decorations = model.getAllDecorations().filter(d => d.options.inlineClassName === 'invisible-token');
+      // const model = editor.getModel()!;
+      // const cursorPosition = editor.getPosition()!;
+      // const decorations = model.getAllDecorations().filter(d => d.options.inlineClassName === 'invisible-token');
 
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        const cursorOffset = model.getOffsetAt(cursorPosition);
-        const value = model.getValue();
+      // if (e.key === 'Delete' || e.key === 'Backspace') {
+      //   const cursorOffset = model.getOffsetAt(cursorPosition);
+      //   const value = model.getValue();
 
-        decorations.forEach(decoration => {
-          const { startOffset, endOffset } = getDecorationOffsets(model, decoration.range);
+      //   decorations.forEach(decoration => {
+      //     const { startOffset, endOffset } = getDecorationOffsets(model, decoration.range);
 
-          if (cursorOffset === startOffset && e.key === 'Delete') {
-            // Delete the entire decoration (token and braces) if Delete is pressed at the boundary
-            const newValue = value.slice(0, startOffset) + value.slice(endOffset);
-            editor.setValue(newValue);
-            e.preventDefault(); // Prevent default deletion behavior
-            // Restore the cursor position after the content is updated
-            editor.setPosition({ lineNumber: cursorPosition.lineNumber, column: cursorPosition.column - 1 });
-          }
+      //     if (cursorOffset === startOffset && e.key === 'Delete') {
+      //       // Delete the entire decoration (token and braces) if Delete is pressed at the boundary
+      //       const newValue = value.slice(0, startOffset) + value.slice(endOffset);
+      //       editor.setValue(newValue);
+      //       e.preventDefault(); // Prevent default deletion behavior
+      //       // Restore the cursor position after the content is updated
+      //       editor.setPosition({ lineNumber: cursorPosition.lineNumber, column: cursorPosition.column - 1 });
+      //     }
 
-          if (cursorOffset === endOffset && e.key === 'Backspace') {
-            // Delete the entire decoration (token and braces) if Backspace is pressed at the boundary
-            const newValue = value.slice(0, startOffset) + value.slice(endOffset);
-            editor.setValue(newValue);
-            e.preventDefault(); // Prevent default deletion behavior
-            editor.setPosition({ lineNumber: cursorPosition.lineNumber, column: cursorPosition.column - 1 });
-          }
-        });
-      };
+      //     if (cursorOffset === endOffset && e.key === 'Backspace') {
+      //       // Delete the entire decoration (token and braces) if Backspace is pressed at the boundary
+      //       const newValue = value.slice(0, startOffset) + value.slice(endOffset);
+      //       editor.setValue(newValue);
+      //       e.preventDefault(); // Prevent default deletion behavior
+      //       editor.setPosition({ lineNumber: cursorPosition.lineNumber, column: cursorPosition.column - 1 });
+      //     }
+      //   });
+      // };
     };
   }, []);
 
@@ -212,12 +247,11 @@ export const CodeEditor = ({ id, readOnly, className, dynamicHeight, style, defa
       monacoEditor.current?.layout();
       monacoEditor.current?.onDidChangeModelContent((e) => {
         const editorValue = monacoEditor.current?.getValue();
-        console.log(editorValue);
         applyTokenDecorations();
       });
-      monacoEditor.current?.onKeyDown(e => {
-        handleKeyDown(e.browserEvent);
-      });
+      // monacoEditor.current?.onKeyDown(e => {
+      //   handleKeyDown(e.browserEvent);
+      // });
       monacoEditor.current?.onMouseUp(e => {
         handleMouseUp(e.target);
       });
