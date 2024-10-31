@@ -9,12 +9,14 @@ import { Icon } from '../../icon';
 import { CodePromptModal, type CodePromptModalHandle } from '../../modals/code-prompt-modal';
 import { Tooltip } from '../../tooltip';
 import { checkNestedKeys, ensureKeyIsValid } from '../environment-utils';
+import { PasswordInput } from './password-input';
 
 interface EditorProps {
   data: EnvironmentKvPairData[];
   onChange: (newPair: EnvironmentKvPairData[]) => void;
+  isPrivate: boolean;
 }
-const cellCommonStyle = 'h-full px-2  flex items-center';
+const cellCommonStyle = 'h-full px-2 flex items-center';
 
 const createNewPair = (enabled: boolean = true): EnvironmentKvPairData => ({
   id: generateId('envPair'),
@@ -38,7 +40,7 @@ const ItemButton = (props: ButtonProps & { tabIndex?: number }) => {
   return <Button {...restProps} ref={btnRef} />;
 };
 
-export const EnvironmentKVEditor = ({ data, onChange }: EditorProps) => {
+export const EnvironmentKVEditor = ({ data, onChange, isPrivate = false }: EditorProps) => {
   const kvPairs: EnvironmentKvPairData[] = data.length > 0 ? [...data] : [createNewPair()];
   const codeModalRef = useRef<CodePromptModalHandle>(null);
   const [kvPairError, setKvPairError] = useState<{ id: string; error: string }[]>([]);
@@ -120,7 +122,7 @@ export const EnvironmentKVEditor = ({ data, onChange }: EditorProps) => {
     }
   };
 
-  const kvPairItemTypes = [
+  const commonItemTypes = [
     {
       id: EnvironmentKvPairDataType.STRING,
       name: 'Text',
@@ -130,6 +132,9 @@ export const EnvironmentKVEditor = ({ data, onChange }: EditorProps) => {
       name: 'JSON',
     },
   ];
+  const secretItemType = [{ id: EnvironmentKvPairDataType.SECRET, name: 'Secret' }];
+  // Use private environment to store vault secrets
+  const kvPairItemTypes = isPrivate ? commonItemTypes.concat(secretItemType) : commonItemTypes;
 
   const renderPairItem = (kvPair: EnvironmentKvPairData) => {
     const { id, name, value, type, enabled = false } = kvPair;
@@ -177,14 +182,16 @@ export const EnvironmentKVEditor = ({ data, onChange }: EditorProps) => {
           }
         </div>
         <div className={`${cellCommonStyle} w-[50%] relative`}>
-          {type === EnvironmentKvPairDataType.STRING ?
+          {type === EnvironmentKvPairDataType.STRING &&
             <OneLineEditor
               id={`environment-kv-editor-value-${id}`}
               placeholder={'Input Value'}
               defaultValue={value.toString()}
               readOnly={!enabled}
               onChange={newValue => handleItemChange(id, 'value', newValue)}
-            /> :
+            />
+          }
+          {type === EnvironmentKvPairDataType.JSON &&
             <ItemButton
               className="px-2 py-1 w-full flex flex-1 items-center justify-center gap-2 aria-pressed:bg-[--hl-sm] rounded-sm text-[--color-font] hover:bg-[--hl-xs] focus:ring-inset ring-1 ring-transparent focus:ring-[--hl-md] transition-all text-sm overflow-hidden"
               tabIndex={-1}
@@ -219,6 +226,17 @@ export const EnvironmentKVEditor = ({ data, onChange }: EditorProps) => {
             >
               <i className="fa fa-pencil-square-o space-right" />Click to Edit
             </ItemButton>
+          }
+          {type === EnvironmentKvPairDataType.SECRET &&
+            <PasswordInput
+              className='w-full h-full'
+              value={value}
+              itemId={id}
+              enabled={enabled}
+              placeholder='Input Secret'
+              // Todo add encryption and decryption logic
+              onChange={newValue => handleItemChange(id, 'value', newValue)}
+            />
           }
         </div>
         <div className={`${cellCommonStyle} w-32`} >
