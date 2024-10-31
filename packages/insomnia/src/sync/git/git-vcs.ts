@@ -5,6 +5,7 @@ import { parse } from 'yaml';
 import { httpClient } from './http-client';
 import { convertToPosixSep } from './path-sep';
 import { gitCallbacks } from './utils';
+import { time, timeEnd } from 'console';
 
 export interface GitAuthor {
   name: string;
@@ -508,7 +509,9 @@ export class GitVCS {
     staged: { path: string; status: [git.HeadStatus, git.WorkdirStatus, git.StageStatus]; name: string }[];
     unstaged: { path: string; status: [git.HeadStatus, git.WorkdirStatus, git.StageStatus]; name: string }[];
   }> {
+    console.time('statusWithContent');
     const status = await this.statusWithContent();
+    console.timeEnd('statusWithContent');
 
     const unstagedChanges = status.filter(({ workdir, stage }) => stage.status !== workdir.status);
     const stagedChanges = status.filter(({ head, stage }) => stage.status !== head.status);

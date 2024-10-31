@@ -34,7 +34,7 @@ export interface SpecificQuery {
 }
 
 export type ChangeType = 'insert' | 'update' | 'remove';
-export const database = {
+const database = {
   // Get all documents of a certain type
   all: async function<T extends BaseModel>(type: string) {
     if (db._empty) {
@@ -668,6 +668,49 @@ export const database = {
     return next([doc]);
   },
 };
+
+const isMainProcess = process.type === 'browser';
+
+let countIsExecuting = 0;
+
+let startTime: undefined | number = undefined;
+
+let totalExecutingTime = 0;
+
+for (let asyncMethodName of Object.keys(database).filter(key => {
+  return typeof database[key] === 'function'
+    && key !== 'onChange'
+    && key !== 'offChange';
+})) {
+  const oriFunction = database[asyncMethodName];
+
+  database[asyncMethodName] = function () {
+    if (countIsExecuting === 0) {
+      if (startTime !== undefined) {
+        console.warn('startTime is not undefined when start');
+      }
+      startTime = Date.now();
+    }
+    countIsExecuting++;
+    return oriFunction.apply(this, arguments).finally(() => {
+      countIsExecuting--;
+      if (countIsExecuting === 0) {
+        if (startTime === undefined) {
+          console.warn('startTime is undefined when end');
+        }
+        const time = Date.now() - startTime;
+        startTime = undefined;
+        totalExecutingTime += time;
+      }
+    });
+  };
+}
+
+setInterval(() => {
+  console.log(`----------------${isMainProcess ? 'Main' : 'Renderer'} process has been executing for ${totalExecutingTime} ms----------------------`);
+}, 1000);
+
+export { database };
 
 interface DB {
   [index: string]: NeDB;

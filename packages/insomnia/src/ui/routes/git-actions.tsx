@@ -32,6 +32,7 @@ import {
   SegmentEvent,
   vcsSegmentEventProperties,
 } from '../analytics';
+import { time, timeEnd } from 'console';
 
 // Loaders
 export type GitRepoLoaderData =
@@ -294,6 +295,7 @@ export interface GitChangesLoaderData {
 export const gitChangesLoader: LoaderFunction = async ({
   params,
 }): Promise<GitChangesLoaderData> => {
+  console.time('gitChangesLoader');
   const { workspaceId } = params;
   invariant(typeof workspaceId === 'string', 'Workspace Id is required');
 
@@ -326,6 +328,7 @@ export const gitChangesLoader: LoaderFunction = async ({
     models.workspaceMeta.updateByParentId(workspaceId, {
       hasUncommittedChanges,
     });
+    console.timeEnd('gitChangesLoader');
     return {
       branch,
       changes,

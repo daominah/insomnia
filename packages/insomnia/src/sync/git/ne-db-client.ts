@@ -36,6 +36,7 @@ export class NeDBClient {
     filePath: string,
     options?: BufferEncoding | { encoding?: BufferEncoding },
   ) {
+    console.count('readFile');
     filePath = path.normalize(filePath);
     options = options || {};
 
@@ -80,6 +81,7 @@ export class NeDBClient {
   }
 
   async writeFile(filePath: string, data: Buffer | string) {
+    console.count('writeFile');
     filePath = path.normalize(filePath);
     const { root, id, type } = parseGitPath(filePath);
 
@@ -110,6 +112,7 @@ export class NeDBClient {
   }
 
   async unlink(filePath: string) {
+    console.count('unlink');
     filePath = path.normalize(filePath);
     const { id, type } = parseGitPath(filePath);
 
@@ -130,6 +133,7 @@ export class NeDBClient {
   // and returns a list of all the files/folders which should be in the directory
   // according to the what entities are children of the workspace
   async readdir(filePath: string) {
+    console.count('readdir');
     filePath = path.normalize(filePath);
     const { root, type, id } = parseGitPath(filePath);
     let docs: BaseModel[] = [];
@@ -194,6 +198,7 @@ export class NeDBClient {
   }
 
   async stat(filePath: string) {
+    console.count('stat');
     filePath = path.normalize(filePath);
     let fileBuff: Buffer | string | null = null;
     let dir: string[] | null = null;

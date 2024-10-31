@@ -268,7 +268,7 @@ export const GitSyncDropdown: FC<Props> = ({ gitRepository, isInsomniaSyncEnable
     action: () => setIsGitRepoSettingsModalOpen(true),
   }]);
 
-  useInterval(() => {
+  /* useInterval(() => {
     gitFetchFetcher.submit(
       {},
       {
@@ -276,7 +276,7 @@ export const GitSyncDropdown: FC<Props> = ({ gitRepository, isInsomniaSyncEnable
         method: 'post',
       }
     );
-  }, 1000 * 60 * 5);
+  }, 1000 * 60 * 5); */
 
   const status = gitStatusFetcher.data?.status;
 
