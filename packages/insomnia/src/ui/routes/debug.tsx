@@ -112,7 +112,6 @@ import {
   useRequestMetaPatcher,
   useRequestPatcher,
 } from '../hooks/use-request';
-import { useOrganizationLoaderData } from './organization';
 import type {
   GrpcRequestLoaderData,
   RequestLoaderData,
@@ -220,9 +219,6 @@ export const Debug: FC = () => {
   };
 
   const { activeRequestGroup } = useRouteLoaderData('request-group/:requestGroupId') as RequestGroupLoaderData || {};
-
-  const { organizations } = useOrganizationLoaderData();
-  const activeOrganization = organizations.find(o => o.id === organizationId);
 
   const [grpcStates, setGrpcStates] = useState<GrpcRequestState[]>(
     grpcRequests.map(r => ({
@@ -755,11 +751,10 @@ export const Debug: FC = () => {
     organizationId,
     projectId,
     workspaceId,
-    activeProject,
     activeWorkspace,
+    activeProject,
     activeRequest,
     activeRequestGroup,
-    activeOrganization,
   });
 
   return (
