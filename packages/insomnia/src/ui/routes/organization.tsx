@@ -249,22 +249,6 @@ async function migrateProjectsUnderOrganization(personalOrganizationId: string, 
   }
 };
 
-async function syncStorageRule(sessionId: string, organizationId: string) {
-  try {
-    const storageRule = await insomniaFetch<StorageRule | undefined>({
-      method: 'GET',
-      path: `/v1/organizations/${organizationId}/storage-rule`,
-      sessionId,
-    });
-
-    invariant(storageRule, 'Failed to load storageRule');
-
-    inMemoryStorageRuleCache.set(organizationId, storageRule);
-  } catch (error) {
-    console.log('[storageRule] Failed to load storage rules', error);
-  }
-}
-
 export const indexLoader: LoaderFunction = async () => {
   const { id: sessionId, accountId } = await userSession.getOrCreate();
   if (sessionId) {
@@ -302,20 +286,6 @@ export const syncOrganizationsAction: ActionFunction = async () => {
 
   if (sessionId) {
     await syncOrganizations(sessionId, accountId);
-  }
-
-  return null;
-};
-
-export const syncOrganizationStorageRuleAction: ActionFunction = async ({ params }) => {
-  const { organizationId } = params;
-
-  invariant(organizationId, 'Organization ID is required');
-
-  const { id: sessionId } = await userSession.getOrCreate();
-
-  if (sessionId) {
-    await syncStorageRule(sessionId, organizationId);
   }
 
   return null;
@@ -366,9 +336,17 @@ export interface Billing {
   accessDenied: boolean;
 }
 
-export const DefaultStorage = 'cloud_plus_local';
+export enum ORG_STORAGE_RULE {
+  CLOUD_PLUS_LOCAL = 'cloud_plus_local',
+  CLOUD_ONLY = 'cloud_only',
+  LOCAL_ONLY = 'local_only',
+};
+
+// https://stackoverflow.com/a/59496175/5714454
+export type OrgStorageRuleType = `${ORG_STORAGE_RULE}`;
+
 export interface StorageRule {
-  storage: 'cloud_plus_local' | 'cloud_only' | 'local_only';
+  storage: OrgStorageRuleType;
   isOverridden: boolean;
 }
 
@@ -377,7 +355,7 @@ export interface OrganizationFeatureLoaderData {
   billingPromise: Promise<Billing>;
 }
 export interface OrganizationStorageLoaderData {
-  storagePromise: Promise<'cloud_plus_local' | 'cloud_only' | 'local_only'>;
+  storagePromise: Promise<OrgStorageRuleType>;
 }
 
 // Create an in-memory storage to store the storage rules
@@ -385,39 +363,53 @@ export const inMemoryStorageRuleCache: Map<string, StorageRule> = new Map<string
 
 export const organizationStorageLoader: LoaderFunction = async ({ params }): Promise<OrganizationStorageLoaderData> => {
   const { organizationId } = params as { organizationId: string };
+  return {
+    storagePromise: fetchAndCacheOrganizationStorageRule(organizationId),
+  };
+};
+
+export const syncOrganizationStorageRuleAction: ActionFunction = async ({ params }) => {
+  const { organizationId } = params;
+  await fetchAndCacheOrganizationStorageRule(organizationId, true);
+  return null;
+};
+
+export async function fetchAndCacheOrganizationStorageRule(
+  organizationId: string | undefined,
+  forceFetch: boolean = false,
+): Promise<OrgStorageRuleType> {
+  invariant(organizationId, 'Organization ID is required');
+
+  if (isScratchpadOrganizationId(organizationId)) {
+    return ORG_STORAGE_RULE.LOCAL_ONLY;
+  }
+  if (!forceFetch) {
+    const storageRule = inMemoryStorageRuleCache.get(organizationId);
+    if (storageRule) {
+      return storageRule.storage;
+    }
+  }
   const { id: sessionId } = await userSession.getOrCreate();
 
-  const storageRule = inMemoryStorageRuleCache.get(organizationId);
-
-  if (storageRule) {
-    return {
-      storagePromise: Promise.resolve(storageRule.storage),
-    };
-  }
-
   // Otherwise fetch from the API
-  try {
-    const storageRuleResponse = insomniaFetch<StorageRule | undefined>({
-      method: 'GET',
-      path: `/v1/organizations/${organizationId}/storage-rule`,
-      sessionId,
-    });
-
-    // Return the value
-    return {
-      storagePromise: storageRuleResponse.then(res => {
-        if (res) {
-          inMemoryStorageRuleCache.set(organizationId, res);
-        }
-        return res?.storage || DefaultStorage;
-      }),
-    };
-  } catch (err) {
-    return {
-      storagePromise: Promise.resolve(DefaultStorage),
-    };
-  }
-};
+  return await insomniaFetch<StorageRule | undefined>({
+    method: 'GET',
+    path: `/v1/organizations/${organizationId}/storage-rule`,
+    sessionId,
+    onlyResolveOnSuccess: true,
+  }).then(
+    res => {
+      if (res) {
+        inMemoryStorageRuleCache.set(organizationId, res);
+      }
+      return res?.storage || ORG_STORAGE_RULE.CLOUD_PLUS_LOCAL;
+    },
+    err => {
+      console.log('[storageRule] Failed to load storage rules', err.message);
+      return ORG_STORAGE_RULE.CLOUD_PLUS_LOCAL;
+    }
+  );
+}
 
 export const organizationPermissionsLoader: LoaderFunction = async ({ params }): Promise<OrganizationFeatureLoaderData> => {
   const { organizationId } = params as { organizationId: string };

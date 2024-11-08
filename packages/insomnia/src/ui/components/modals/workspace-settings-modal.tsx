@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button, Dialog, Heading, Input, Label, Modal, ModalOverlay, Radio, RadioGroup, TextField } from 'react-aria-components';
 import { useFetcher, useRouteLoaderData } from 'react-router-dom';
-import { useParams } from 'react-router-dom';
 
 import { database as db } from '../../../common/database';
 import { getWorkspaceLabel } from '../../../common/get-workspace-label';
@@ -9,13 +8,14 @@ import * as models from '../../../models/index';
 import type { MockServer } from '../../../models/mock-server';
 import { isRequest } from '../../../models/request';
 import { isEnvironment, isMockServer, isScratchpad, type Workspace } from '../../../models/workspace';
-import type { OrganizationLoaderData } from '../../routes/organization';
+import type { WorkspaceLoaderData } from '../../routes/workspace';
 import { Link } from '../base/link';
 import { PromptButton } from '../base/prompt-button';
 import { Icon } from '../icon';
 import { MarkdownEditor } from '../markdown-editor';
 import { showModal } from '.';
 import { AlertModal } from './alert-modal';
+import { useAvailableMockServerType } from './mock-server-settings-modal';
 
 interface Props {
   onClose: () => void;
@@ -24,14 +24,20 @@ interface Props {
 }
 
 export const WorkspaceSettingsModal = ({ workspace, mockServer, onClose }: Props) => {
+  // file://./../../routes/workspace.tsx#workspaceLoader
+  const workspaceLoaderData = useRouteLoaderData(':workspaceId') as WorkspaceLoaderData | null;
+  const isLocalProject = !workspaceLoaderData?.activeProject?.remoteId;
+  const {
+    isSelfHostedDisabled,
+    isCloudProjectDisabled,
+    organizationId,
+    projectId,
+    isEnterprise,
+  } = useAvailableMockServerType(isLocalProject);
   const isScratchpadWorkspace = isScratchpad(workspace);
-  const { currentPlan } = useRouteLoaderData('/organization') as OrganizationLoaderData;
-  const isEnterprise = currentPlan?.type.includes('enterprise');
-  const isSelfHostedDisabled = !isEnterprise;
 
   const activeWorkspaceName = workspace.name;
 
-  const { organizationId, projectId } = useParams<{ organizationId: string; projectId: string }>();
   const workspaceFetcher = useFetcher();
   const mockServerFetcher = useFetcher();
   const workspacePatcher = (workspaceId: string, patch: Partial<Workspace>) => {
@@ -42,6 +48,7 @@ export const WorkspaceSettingsModal = ({ workspace, mockServer, onClose }: Props
     });
   };
   const mockServerPatcher = (mockServerId: string, patch: Partial<MockServer>) => {
+    // file://./../../routes/actions.tsx#updateMockServerAction
     mockServerFetcher.submit({ ...patch, mockServerId }, {
       action: `/organization/${organizationId}/project/${projectId}/workspace/${workspace._id}/mock-server/update`,
       method: 'post',
@@ -148,6 +155,7 @@ export const WorkspaceSettingsModal = ({ workspace, mockServer, onClose }: Props
                       <div className="flex gap-2">
                         <Radio
                           value="cloud"
+                          isDisabled={isCloudProjectDisabled}
                           className="flex-1 data-[selected]:border-[--color-surprise] data-[selected]:ring-2 data-[selected]:ring-[--color-surprise] data-[disabled]:opacity-25 hover:bg-[--hl-xs] focus:bg-[--hl-sm] border border-solid border-[--hl-md] rounded p-4 focus:outline-none transition-colors"
                         >
                           <div className='flex items-center gap-2'>
@@ -160,6 +168,7 @@ export const WorkspaceSettingsModal = ({ workspace, mockServer, onClose }: Props
                         </Radio>
                         <Radio
                           value="self-hosted"
+                          isDisabled={isSelfHostedDisabled}
                           className="flex-1 data-[selected]:border-[--color-surprise] data-[selected]:ring-2 data-[selected]:ring-[--color-surprise] data-[disabled]:opacity-25 hover:bg-[--hl-xs] focus:bg-[--hl-sm] border border-solid border-[--hl-md] rounded p-4 focus:outline-none transition-colors"
                         >
                           <div className="flex items-center gap-2">

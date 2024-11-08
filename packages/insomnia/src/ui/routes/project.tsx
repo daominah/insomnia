@@ -90,7 +90,7 @@ import { TimeFromNow } from '../components/time-from-now';
 import { useInsomniaEventStreamContext } from '../context/app/insomnia-event-stream-context';
 import { useLoaderDeferData } from '../hooks/use-loader-defer-data';
 import { useOrganizationPermissions } from '../hooks/use-organization-features';
-import { DefaultStorage, type OrganizationLoaderData, type OrganizationStorageLoaderData, useOrganizationLoaderData } from './organization';
+import { ORG_STORAGE_RULE, type OrganizationLoaderData, type OrganizationStorageLoaderData, useOrganizationLoaderData } from './organization';
 import { useRootLoaderData } from './root';
 
 interface TeamProject {
@@ -642,6 +642,7 @@ const ProjectRoute: FC = () => {
   useEffect(() => {
     if (!isScratchpadOrganizationId(organizationId)) {
       const load = storageRuleFetcher.load;
+      // file://./organization.tsx#organizationStorageLoader
       load(`/organization/${organizationId}/storage-rule`);
     }
   }, [organizationId, storageRuleFetcher.load]);
@@ -650,7 +651,7 @@ const ProjectRoute: FC = () => {
 
   const { storagePromise } = storageRuleFetcher.data || {};
 
-  const [storage = DefaultStorage] = useLoaderDeferData(storagePromise);
+  const [storage = ORG_STORAGE_RULE.CLOUD_PLUS_LOCAL] = useLoaderDeferData(storagePromise);
 
   const [projectListFilter, setProjectListFilter] = useLocalStorage(`${organizationId}:project-list-filter`, '');
   const [workspaceListFilter, setWorkspaceListFilter] = useLocalStorage(`${projectId}:workspace-list-filter`, '');
@@ -960,11 +961,11 @@ const ProjectRoute: FC = () => {
         },
       },
   ];
-  const defaultStorageSelection = storage === 'local_only' ? 'local' : 'remote';
-  const isRemoteProjectInconsistent = activeProject && isRemoteProject(activeProject) && storage === 'local_only';
-  const isLocalProjectInconsistent = activeProject && !isRemoteProject(activeProject) && storage === 'cloud_only';
+  const defaultStorageSelection = storage === ORG_STORAGE_RULE.LOCAL_ONLY ? 'local' : 'remote';
+  const isRemoteProjectInconsistent = activeProject && isRemoteProject(activeProject) && storage === ORG_STORAGE_RULE.LOCAL_ONLY;
+  const isLocalProjectInconsistent = activeProject && !isRemoteProject(activeProject) && storage === ORG_STORAGE_RULE.CLOUD_ONLY;
   const isProjectInconsistent = isRemoteProjectInconsistent || isLocalProjectInconsistent;
-  const showStorageRestrictionMessage = storage !== 'cloud_plus_local';
+  const showStorageRestrictionMessage = storage !== ORG_STORAGE_RULE.CLOUD_PLUS_LOCAL;
 
   useEffect(() => {
     window.main.landingPageRendered(LandingPage.ProjectDashboard);
@@ -1593,7 +1594,7 @@ const ProjectRoute: FC = () => {
                       </Label>
                       <div className="flex gap-2">
                         <Radio
-                          isDisabled={storage === 'local_only'}
+                          isDisabled={storage === ORG_STORAGE_RULE.LOCAL_ONLY}
                           value="remote"
                           className="flex-1 data-[selected]:border-[--color-surprise] data-[selected]:ring-2 data-[selected]:ring-[--color-surprise] data-[disabled]:opacity-25 hover:bg-[--hl-xs] focus:bg-[--hl-sm] border border-solid border-[--hl-md] rounded p-4 focus:outline-none transition-colors"
                         >
@@ -1606,7 +1607,7 @@ const ProjectRoute: FC = () => {
                           </p>
                         </Radio>
                         <Radio
-                          isDisabled={storage === 'cloud_only'}
+                          isDisabled={storage === ORG_STORAGE_RULE.CLOUD_ONLY}
                           value="local"
                           className="flex-1 data-[selected]:border-[--color-surprise] data-[selected]:ring-2 data-[selected]:ring-[--color-surprise] data-[disabled]:opacity-25 hover:bg-[--hl-xs] focus:bg-[--hl-sm] border border-solid border-[--hl-md] rounded p-4 focus:outline-none transition-colors"
                         >
@@ -1723,13 +1724,13 @@ const ProjectRoute: FC = () => {
                           className="py-1 placeholder:italic w-full pl-2 pr-7 rounded-sm border border-solid border-[--hl-sm] bg-[--color-bg] text-[--color-font] focus:outline-none focus:ring-1 focus:ring-[--hl-md] transition-colors"
                         />
                       </TextField>
-                      <RadioGroup name="type" defaultValue={storage === 'cloud_plus_local' ? activeProject?.remoteId ? 'remote' : 'local' : storage !== 'cloud_only' ? 'local' : 'remote'} className="flex flex-col gap-2">
+                      <RadioGroup name="type" defaultValue={storage === ORG_STORAGE_RULE.CLOUD_PLUS_LOCAL ? activeProject?.remoteId ? 'remote' : 'local' : storage !== ORG_STORAGE_RULE.CLOUD_ONLY ? 'local' : 'remote'} className="flex flex-col gap-2">
                         <Label className="text-sm text-[--hl]">
                           Project type
                         </Label>
                         <div className="flex gap-2">
                           <Radio
-                            isDisabled={storage === 'local_only'}
+                            isDisabled={storage === ORG_STORAGE_RULE.LOCAL_ONLY}
                             value="remote"
                             className="data-[selected]:border-[--color-surprise] flex-1 data-[disabled]:opacity-25 data-[selected]:ring-2 data-[selected]:ring-[--color-surprise] hover:bg-[--hl-xs] focus:bg-[--hl-sm] border border-solid border-[--hl-md] rounded p-4 focus:outline-none transition-colors"
                           >
@@ -1742,7 +1743,7 @@ const ProjectRoute: FC = () => {
                             </p>
                           </Radio>
                           <Radio
-                            isDisabled={storage === 'cloud_only'}
+                            isDisabled={storage === ORG_STORAGE_RULE.CLOUD_ONLY}
                             value="local"
                             className="data-[selected]:border-[--color-surprise] flex-1 data-[disabled]:opacity-25 data-[selected]:ring-2 data-[selected]:ring-[--color-surprise] hover:bg-[--hl-xs] focus:bg-[--hl-sm] border border-solid border-[--hl-md] rounded p-4 focus:outline-none transition-colors"
                           >

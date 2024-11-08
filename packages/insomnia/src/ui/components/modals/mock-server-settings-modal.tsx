@@ -1,25 +1,50 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Dialog, Heading, Input, Label, Link, Modal, ModalOverlay, Radio, RadioGroup, TextField } from 'react-aria-components';
 import { useFetcher, useParams, useRouteLoaderData } from 'react-router-dom';
 
 import { invariant } from '../../../utils/invariant';
-import type { OrganizationLoaderData } from '../../routes/organization';
+import { fetchAndCacheOrganizationStorageRule, ORG_STORAGE_RULE, type OrganizationLoaderData, type OrgStorageRuleType } from '../../routes/organization';
 import type { ProjectIdLoaderData } from '../../routes/project';
 import { Icon } from '../icon';
 import { showModal } from '.';
 import { AlertModal } from './alert-modal';
 
-export const MockServerSettingsModal = ({ onClose }: { onClose: () => void }) => {
+export function useAvailableMockServerType(isLocalProject: boolean) {
   const { organizationId, projectId } = useParams<{ organizationId: string; projectId: string }>();
+  const { currentPlan } = useRouteLoaderData('/organization') as OrganizationLoaderData;
+  const [orgStorageRule, setOrgStorageRule] = useState<OrgStorageRuleType>(ORG_STORAGE_RULE.CLOUD_PLUS_LOCAL);
+  useEffect(() => {
+    fetchAndCacheOrganizationStorageRule(organizationId as string).then(setOrgStorageRule);
+  }, [organizationId]);
+
+  const isEnterprise = currentPlan?.type.includes('enterprise');
+  const isSelfHostedDisabled = !isEnterprise || orgStorageRule === ORG_STORAGE_RULE.CLOUD_ONLY;
+  const isCloudProjectDisabled = isLocalProject || orgStorageRule === ORG_STORAGE_RULE.LOCAL_ONLY;
+  return {
+    isSelfHostedDisabled,
+    isCloudProjectDisabled,
+    organizationId,
+    projectId,
+    isEnterprise,
+    isLocalProject,
+  };
+}
+
+export const MockServerSettingsModal = ({ onClose }: { onClose: () => void }) => {
+  // file://./../../routes/project.tsx#projectIdLoader
+  const projectData = useRouteLoaderData('/project/:projectId') as ProjectIdLoaderData | null;
+  const isLocalProject = !projectData?.activeProject?.remoteId;
+  const {
+    isSelfHostedDisabled,
+    isCloudProjectDisabled,
+    organizationId,
+    projectId,
+    isEnterprise,
+  } = useAvailableMockServerType(isLocalProject);
   const fetcher = useFetcher({
     key: `${organizationId}-create-mock-server`,
   });
-  const { currentPlan } = useRouteLoaderData('/organization') as OrganizationLoaderData;
-  const projectData = useRouteLoaderData('/project/:projectId') as ProjectIdLoaderData | null;
-  const isLocalProject = !projectData?.activeProject?.remoteId;
-  const isEnterprise = currentPlan?.type.includes('enterprise');
-  const isSelfHostedDisabled = !isEnterprise;
-  const isCloudProjectDisabled = isLocalProject;
+
   const canOnlyCreateSelfHosted = isLocalProject && isEnterprise;
   const defaultServerType = canOnlyCreateSelfHosted ? 'self-hosted' : 'cloud';
   const [serverType, setServerType] = useState<'self-hosted' | 'cloud'>(defaultServerType);
@@ -83,6 +108,7 @@ export const MockServerSettingsModal = ({ onClose }: { onClose: () => void }) =>
                     }
                   }
 
+                  // file://./../../routes/actions.tsx#createNewWorkspaceAction
                   fetcher.submit(
                     {
                       name,
