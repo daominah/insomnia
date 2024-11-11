@@ -9,6 +9,7 @@ import { docsAfterResponseScript } from '../../../common/documentation';
 import { delay, fnOrString } from '../../../common/misc';
 import { metaSortKeySort } from '../../../common/sorting';
 import * as models from '../../../models';
+import { type as cloudCredentialModelType } from '../../../models/cloud-credential';
 import type { BaseModel } from '../../../models/index';
 import { isRequest, type Request } from '../../../models/request';
 import { isRequestGroup, type RequestGroup } from '../../../models/request-group';
@@ -27,6 +28,7 @@ import { FileInputButton } from '../base/file-input-button';
 import { HelpTooltip } from '../help-tooltip';
 import { Icon } from '../icon';
 import { localTemplateTags } from './local-template-tags';
+import { ArgConfigSubForm, couldRenderForm } from './tag-editor-arg-sub-form';
 
 interface Props {
   defaultValue: string;
@@ -76,7 +78,7 @@ export const TagEditor: FC<Props> = props => {
     error: '',
     variables: [],
   });
-  const { handleRender, handleGetRenderContext } = useNunjucks();
+  const { handleRender, handleGetRenderContext } = useNunjucks({ renderContext: { purpose: 'preview' } });
 
   const refreshModels = useCallback(async () => {
     setState(state => ({ ...state, loadingDocs: true }));
@@ -87,6 +89,8 @@ export const TagEditor: FC<Props> = props => {
     for (const doc of await db.withDescendants(props.workspace, models.request.type)) {
       allDocs[doc.type].push(doc);
     }
+    // add global Cloud Credential data
+    allDocs[cloudCredentialModelType] = await db.find(cloudCredentialModelType);
     // @ts-expect-error -- type unsoundness
     allDocs[models.request.type] = sortRequests((allDocs[models.request.type] || []).concat(allDocs[models.requestGroup.type] || []), props.workspace._id);
     setState(state => ({ ...state, allDocs, loadingDocs: false }));
@@ -334,19 +338,33 @@ export const TagEditor: FC<Props> = props => {
         const isVariable = argData.type === 'variable';
 
         let argInput;
-        const isVariableAllowed = argDefinition.type !== 'model';
+        let isVariableAllowed = argDefinition.type !== 'model';
         if (!isVariable) {
           if (argDefinition.type === 'string') {
+            const tagDefinitionName = activeTagDefinition.name;
             const placeholder =
               typeof argDefinition.placeholder === 'string' ? argDefinition.placeholder : '';
             const encoding = argDefinition.encoding || 'utf8';
-            argInput = (<input
-              type="text"
-              defaultValue={strValue.replace(/\\\\/g, '\\') || ''}
-              placeholder={placeholder}
-              onChange={handleChange}
-              data-encoding={encoding}
-            />);
+            const needToRenderSubForm = argDefinition.requireSubForm && couldRenderForm(tagDefinitionName);
+            if (needToRenderSubForm) {
+              argInput = (
+                <ArgConfigSubForm
+                  configValue={strValue.replace(/\\\\/g, '\\') || ''}
+                  onChange={(newConfigValue: string) => updateArg(newConfigValue, index)}
+                  activeTagData={activeTagData}
+                  activeTagDefinition={activeTagDefinition}
+                />
+              );
+              isVariableAllowed = false;
+            } else {
+              argInput = (<input
+                type="text"
+                defaultValue={strValue.replace(/\\\\/g, '\\') || ''}
+                placeholder={placeholder}
+                onChange={handleChange}
+                data-encoding={encoding}
+              />);
+            }
           } else if (argDefinition.type === 'enum') {
             argInput = (
               <select value={strValue} onChange={handleChange}>
@@ -370,6 +388,12 @@ export const TagEditor: FC<Props> = props => {
               extensions={argDefinition.extensions}
             />);
           } else if (argDefinition.type === 'model') {
+            const modelName = typeof argDefinition.model === 'string' ? argDefinition.model : 'unknown';
+            let targetDoc = state.allDocs[modelName];
+            const modelFilterFunc = argDefinition.modelFilter;
+            if (modelFilterFunc && typeof modelFilterFunc === 'function') {
+              targetDoc = targetDoc.filter(doc => modelFilterFunc(doc, activeTagData.args));
+            }
             argInput = state.loadingDocs ? (
               <select disabled={state.loadingDocs}>
                 <option>Loading...</option>
@@ -377,7 +401,7 @@ export const TagEditor: FC<Props> = props => {
             ) : (
               <select value={typeof strValue === 'string' ? strValue : 'unknown'} onChange={handleChange}>
                 <option value="n/a">-- Select Item --</option>
-                {state.allDocs[typeof argDefinition.model === 'string' ? argDefinition.model : 'unknown']?.map((doc: any) => {
+                  {targetDoc?.map((doc: any) => {
                   let namePrefix: string | null = null;
                   // Show parent folder with name if it's a request
                   if (isRequest(doc)) {
