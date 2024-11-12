@@ -52,12 +52,13 @@ export const SyncDropdown: FC<Props> = ({ gitSyncEnabled }) => {
     }
   }, [organizationId, projectId, syncDataLoaderFetcher, workspaceId]);
 
-  useInterval(() => {
-    syncDataActionFetcher.submit({}, {
-      method: 'POST',
-      action: `/organization/${organizationId}/project/${projectId}/workspace/${workspaceId}/insomnia-sync/sync-data`,
-    });
-  }, ONE_MINUTE_IN_MS);
+  // useInterval(() => {
+  //   // Interval to keep the sync data up to date
+  //   syncDataActionFetcher.submit({}, {
+  //     method: 'POST',
+  //     action: `/organization/${organizationId}/project/${projectId}/workspace/${workspaceId}/insomnia-sync/sync-data`,
+  //   });
+  // }, ONE_MINUTE_IN_MS);
 
   const error = checkoutFetcher.data?.error || pullFetcher.data?.error || pushFetcher.data?.error || rollbackFetcher.data?.error;
 
