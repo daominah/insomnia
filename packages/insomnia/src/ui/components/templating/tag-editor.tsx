@@ -353,6 +353,7 @@ export const TagEditor: FC<Props> = props => {
                   onChange={(newConfigValue: string) => updateArg(newConfigValue, index)}
                   activeTagData={activeTagData}
                   activeTagDefinition={activeTagDefinition}
+                  docs={state.allDocs}
                 />
               );
               isVariableAllowed = false;
