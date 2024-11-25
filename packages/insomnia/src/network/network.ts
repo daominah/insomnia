@@ -229,7 +229,7 @@ export const tryToExecutePreRequestScript = async (
     eventName: 'prerequest',
     settings,
     transientVariables,
-  runtime,
+    runtime,
   });
   if (!mutatedContext || 'error' in mutatedContext) {
     return {
