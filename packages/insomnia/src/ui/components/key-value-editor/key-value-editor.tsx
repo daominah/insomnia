@@ -1,4 +1,4 @@
-import React, { type FC, Fragment, useCallback } from 'react';
+import React, { type FC, Fragment, useCallback, useMemo } from 'react';
 import { Button, DropIndicator, ListBox, ListBoxItem, Menu, MenuItem, MenuTrigger, Popover, ToggleButton, Toolbar, useDragAndDrop } from 'react-aria-components';
 
 import { describeByteSize, generateId } from '../../../common/misc';
@@ -63,7 +63,7 @@ export const KeyValueEditor: FC<Props> = ({
 }) => {
   const [showDescription, setShowDescription] = React.useState(false);
   const { enabled: nunjucksEnabled } = useNunjucksEnabled();
-  let pairsListItems = pairs.length > 0 ? pairs.map(pair => ({ ...pair, id: pair.id || generateId('pair') })) : [createEmptyPair()];
+  let pairsListItems = useMemo(() => pairs.length > 0 ? pairs.map(pair => ({ ...pair, id: pair.id || generateId('pair') })) : [createEmptyPair()], [pairs]);
   const initialReadOnlyItems = readOnlyPairs?.map(pair => ({ ...pair, id: pair.id || generateId('pair') })) || [];
 
   const upsertPair = useCallback(function upsertPair(pairsListItems: Pair[], pair: Pair) {
