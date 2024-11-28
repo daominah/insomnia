@@ -115,13 +115,11 @@ test.describe('runner features tests', async () => {
         expect(await page.locator('input[name="Iterations"]').inputValue()).toBe('2');
 
         // select requests to test
-        await page.locator('text=Select All').click();
-        await page.locator('.runner-request-list-req0').click();
-        await page.locator('.runner-request-list-req01').click();
-        await page.locator('.runner-request-list-req02').click();
-        await page.locator('.runner-request-list-set-var1').click();
-        await page.locator('.runner-request-list-read-var1').click();
-        await page.locator('input[name="enable-log"]').click();
+        await page.locator('.runner-request-list-req1').click();
+        await page.locator('.runner-request-list-req2').click();
+        await page.locator('.runner-request-list-req3').click();
+        await page.locator('.runner-request-list-req4').click();
+        await page.locator('.runner-request-list-req5').click();
 
         // send
         await page.getByTestId('request-pane').getByRole('button', { name: 'Run' }).click();
