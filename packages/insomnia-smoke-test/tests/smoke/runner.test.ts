@@ -234,16 +234,26 @@ test.describe('runner features tests', async () => {
 
         await page.locator('.runner-request-list-printLogs').click();
 
-        // configure
-        await page.getByRole('tab', { name: 'advanced' }).click();
-        await page.locator('input[name="enable-log"]').click();
+        const expectToHaveLogs = [false, true];
 
-        // send
-        await page.getByRole('button', { name: 'Run', exact: true }).click();
+        for (const expectToHaveLog of expectToHaveLogs) {
+            // configure
+            await page.getByRole('tab', { name: 'advanced' }).click();
+            await page.locator('input[name="enable-log"]').click();
 
-        // verify there's no log
-        const responsePane = page.getByTestId('response-pane');
-        await page.getByRole('tab', { name: 'Console' }).click();
-        await expect(responsePane).not.toContainText("it won't print");
+            // send
+            await page.getByRole('button', { name: 'Run', exact: true }).click();
+
+            // verify there's no log
+            await page.getByText('1 / 1').first().click();
+            await page.getByRole('tab', { name: 'Console' }).click();
+
+            const consoleTabContent = page.locator('.pane-two');
+            if (expectToHaveLog) {
+                expect(consoleTabContent).toContainText("it won't print");
+            } else {
+                expect(consoleTabContent).not.toContainText("it won't print");
+            }
+        }
     });
 });
