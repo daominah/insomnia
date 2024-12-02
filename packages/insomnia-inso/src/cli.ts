@@ -9,6 +9,7 @@ import fs from 'fs';
 import { JSON_ORDER_PREFIX, JSON_ORDER_SEPARATOR } from 'insomnia/src/common/constants';
 import { getSendRequestCallbackMemDb } from 'insomnia/src/common/send-request';
 import { init, type as EnvironmentType, UserUploadEnvironment } from 'insomnia/src/models/environment';
+import { Request } from 'insomnia/src/models/request';
 import { deserializeNDJSON } from 'insomnia/src/utils/ndjson';
 import { type RequestTestResult } from 'insomnia-sdk';
 import { generate, runTestsCli } from 'insomnia-testing';
@@ -23,8 +24,6 @@ import { Database, isFile, loadDb } from './db';
 import { insomniaExportAdapter } from './db/adapters/insomnia-adapter';
 import { loadApiSpec, promptApiSpec } from './db/models/api-spec';
 import { loadEnvironment, promptEnvironment } from './db/models/environment';
-import { Request } from './db/models/request';
-import { BaseModel } from './db/models/types';
 import { loadTestSuites, promptTestSuites } from './db/models/unit-test-suite';
 import { matchIdIsh } from './db/models/util';
 import { loadWorkspace, promptWorkspace } from './db/models/workspace';
@@ -189,14 +188,14 @@ const getRequestsToRunFromListOrWorkspace = (db: Database, workspaceId: string, 
   if (hasItems) {
     const folderIds = item.filter(id => db.RequestGroup.find(rg => rg._id === id));
     const allRequestGroupIds = getRequestGroupIdsRecursively(folderIds);
-    const folderRequests = db.Request.filter(req => allRequestGroupIds.includes(req.parentId));
-    const reqItems = db.Request.filter(req => item.includes(req._id));
+    const folderRequests = db.Request.filter(req => allRequestGroupIds.includes(req.parentId)) as Request[];
+    const reqItems = db.Request.filter(req => item.includes(req._id)) as Request[];
 
     return [...reqItems, ...folderRequests];
   }
 
   const allRequestGroupIds = getRequestGroupIdsRecursively([workspaceId]);
-  return db.Request.filter(req => [workspaceId, ...allRequestGroupIds].includes(req.parentId));
+  return db.Request.filter(req => [workspaceId, ...allRequestGroupIds].includes(req.parentId)) as Request[];
 };
 // adds support for repeating args in commander.js eg. -i 1 -i 2 -i 3
 const collect = (val: string, memo: string[]) => {
@@ -759,7 +758,7 @@ Test results:`);
 };
 
 const getNextRequestOffset = (
-  leftRequestsToRun: BaseModel[],
+  leftRequestsToRun: Request[],
   nextRequestIdOrName: string
 ) => {
   const idMatchOffset = leftRequestsToRun.findIndex(req => req._id.trim() === nextRequestIdOrName.trim());
