@@ -240,6 +240,24 @@ export const Runner: FC<{}> = () => {
     },
   });
 
+  const isConsistencyChanged = useMemo(() => {
+    if (requestRows.length !== reqList.items.length) {
+      return true;
+    } else if (Array.from(reqList.selectedKeys).length !== requestRows.length) {
+      return true;
+    }
+
+    let changed = false;
+    requestRows.forEach((row: RequestRow, index: number) => {
+      if (row.id !== reqList.items[index].id) {
+        changed = true;
+      }
+
+    });
+
+    return changed;
+  }, [requestRows, reqList]);
+
   const { dragAndDropHooks: requestsDnD } = useDragAndDrop({
     getItems: keys => {
       return [...keys].map(key => {
@@ -694,7 +712,7 @@ export const Runner: FC<{}> = () => {
               <CLIPreviewModal
                 onClose={() => setShowCLIModal(false)}
                 requestIds={Array.from(reqList.items).map(item => item.id).filter(id => new Set(reqList.selectedKeys).has(id))}
-                allSelected={Array.from(reqList.selectedKeys).length === Array.from(reqList.items).length}
+                keepManualOrder={!isConsistencyChanged}
                 iterationCount={iterationCount}
                 delay={delay}
                 filePath={file?.path || ''}

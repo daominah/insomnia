@@ -6,10 +6,10 @@ import type { WorkspaceLoaderData } from '../../routes/workspace';
 import { CopyButton } from '../base/copy-button';
 import { Icon } from '../icon';
 
-export const CLIPreviewModal = ({ onClose, requestIds, allSelected, iterationCount, delay, filePath, bail }: { onClose: () => void; requestIds: string[]; allSelected: boolean; iterationCount: number; delay: number; filePath: string; bail: boolean }) => {
+export const CLIPreviewModal = ({ onClose, requestIds, keepManualOrder, iterationCount, delay, filePath, bail }: { onClose: () => void; requestIds: string[]; keepManualOrder: boolean; iterationCount: number; delay: number; filePath: string; bail: boolean }) => {
   const { workspaceId } = useParams() as { workspaceId: string };
   const { activeEnvironment } = useRouteLoaderData(':workspaceId') as WorkspaceLoaderData;
-  const workspaceIdOrRequestIds = allSelected ? workspaceId.slice(0, 10) : '-i ' + requestIds.join(' -i ');
+  const workspaceIdOrRequestIds = keepManualOrder ? workspaceId.slice(0, 10) : '-i ' + requestIds.join(' -i ');
   const iterationCountArgument = iterationCount > 1 ? ` -n ${iterationCount}` : '';
   const delayArgument = delay > 0 ? ` --delay-request ${delay}` : '';
   const iterationFilePath = filePath ? ` -d "${filePath}"` : '';
