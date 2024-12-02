@@ -263,11 +263,11 @@ export const EnvironmentKVEditor = ({ data, onChange, vaultKey = '', isPrivate =
               itemId={id}
               enabled={enabled}
               placeholder='Input Secret'
-            value={decryptSecretValue(value, symmetricKey)}
-            onChange={newValue => {
-              const encryptedValue = encryptSecretValue(newValue, symmetricKey);
-              handleItemChange(id, 'value', encryptedValue);
-            }}
+              value={decryptSecretValue(value, symmetricKey)}
+              onChange={newValue => {
+                const encryptedValue = encryptSecretValue(newValue, symmetricKey);
+                handleItemChange(id, 'value', encryptedValue);
+              }}
             />
           }
         </div>
