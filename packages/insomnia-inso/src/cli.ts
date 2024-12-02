@@ -23,6 +23,7 @@ import { Database, isFile, loadDb } from './db';
 import { insomniaExportAdapter } from './db/adapters/insomnia-adapter';
 import { loadApiSpec, promptApiSpec } from './db/models/api-spec';
 import { loadEnvironment, promptEnvironment } from './db/models/environment';
+import { Request } from './db/models/request';
 import { BaseModel } from './db/models/types';
 import { loadTestSuites, promptTestSuites } from './db/models/unit-test-suite';
 import { matchIdIsh } from './db/models/util';
@@ -179,7 +180,7 @@ const getWorkspaceOrFallback = async (db: Database, identifier: string, ci: bool
   }
   return await promptWorkspace(db, !!ci);
 };
-const getRequestsToRunFromListOrWorkspace = (db: Database, workspaceId: string, item: string[]) => {
+const getRequestsToRunFromListOrWorkspace = (db: Database, workspaceId: string, item: string[]): Request[] => {
   const getRequestGroupIdsRecursively = (from: string[]): string[] => {
     const parentIds = db.RequestGroup.filter(rg => from.includes(rg.parentId)).map(rg => rg._id);
     return [...parentIds, ...(parentIds.length > 0 ? getRequestGroupIdsRecursively(parentIds) : [])];
@@ -547,6 +548,9 @@ export const go = (args?: string[]) => {
         const requestOrder = new Map<string, number>();
         options.item.forEach((reqId: string, order: number) => requestOrder.set(reqId, order + 1));
         requestsToRun = requestsToRun.sort((a, b) => (requestOrder.get(a._id) || requestsToRun.length) - (requestOrder.get(b._id) || requestsToRun.length));
+      } else {
+        // sort by metaSortKey (manual sorting order)
+        requestsToRun = requestsToRun.sort((a, b) => a.metaSortKey - b.metaSortKey);
       }
 
       try {
