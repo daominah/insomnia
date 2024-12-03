@@ -247,7 +247,11 @@ export const Runner: FC<{}> = () => {
       return true;
     }
 
-    let changed = false;
+    const index = requestRows.findIndex((row: RequestRow, index: number) => {
+      return row.id !== reqList.items[index].id;
+    });
+
+    return index === -1;
     requestRows.forEach((row: RequestRow, index: number) => {
       if (row.id !== reqList.items[index].id) {
         changed = true;
