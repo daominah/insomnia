@@ -1,5 +1,5 @@
 import React, { createContext, type FC, type PropsWithChildren, useCallback, useContext, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLocalStorage } from 'react-use';
 
 import type { BaseTab } from '../../components/tabs/tab';
@@ -60,6 +60,8 @@ export const InsomniaTabProvider: FC<PropsWithChildren> = ({ children }) => {
   const appTabsRef = useRef(appTabs);
 
   const navigate = useNavigate();
+  // keep search params to navigate to another tab
+  const [searchParams] = useSearchParams();
 
   const updateInsomniaTabs = useCallback(({ organizationId, tabList, activeTabId }: UpdateInsomniaTabParams) => {
     const newState = {
@@ -106,14 +108,14 @@ export const InsomniaTabProvider: FC<PropsWithChildren> = ({ children }) => {
     }
     const newTabList = currentTabs.tabList.filter(tab => tab.id !== id);
     if (currentTabs.activeTabId === id) {
-      navigate(newTabList[index - 1 < 0 ? 0 : index - 1]?.url || '');
+      navigate(`${newTabList[Math.max(index - 1, 0)]?.url}?${searchParams.toString()}` || '');
     }
     updateInsomniaTabs({
       organizationId,
       tabList: newTabList,
-      activeTabId: currentTabs.activeTabId === id ? newTabList[index - 1 < 0 ? 0 : index - 1]?.id : currentTabs.activeTabId as string,
+      activeTabId: currentTabs.activeTabId === id ? newTabList[Math.max(index - 1, 0)]?.id : currentTabs.activeTabId as string,
     });
-  }, [navigate, organizationId, projectId, updateInsomniaTabs]);
+  }, [navigate, organizationId, projectId, searchParams, updateInsomniaTabs]);
 
   const closeAllTabsUnderWorkspace = useCallback((workspaceId: string) => {
     const currentTabs = appTabsRef?.current?.[organizationId];
@@ -163,14 +165,14 @@ export const InsomniaTabProvider: FC<PropsWithChildren> = ({ children }) => {
     }
 
     if (currentTabs.activeTabId !== id) {
-      navigate(reservedTab.url);
+      navigate(`${reservedTab.url}?${searchParams.toString()}`);
     }
     updateInsomniaTabs({
       organizationId,
       tabList: [reservedTab],
       activeTabId: id,
     });
-  }, [navigate, organizationId, updateInsomniaTabs]);
+  }, [navigate, organizationId, searchParams, updateInsomniaTabs]);
 
   const updateTabById = useCallback((tabId: string, patches: Partial<BaseTab>) => {
     const currentTabs = appTabsRef?.current?.[organizationId];
@@ -198,12 +200,15 @@ export const InsomniaTabProvider: FC<PropsWithChildren> = ({ children }) => {
     if (!currentTabs) {
       return;
     }
+    const tab = currentTabs?.tabList.find(tab => tab.id === id);
+    // keep the search params when navigate to another tab
+    tab?.url && navigate(`${tab?.url}?${searchParams.toString()}`);
     updateInsomniaTabs({
       organizationId,
       tabList: currentTabs.tabList,
       activeTabId: id,
     });
-  }, [organizationId, updateInsomniaTabs]);
+  }, [navigate, organizationId, searchParams, updateInsomniaTabs]);
 
   const updateProjectName = useCallback((projectId: string, name: string) => {
     const currentTabs = appTabsRef?.current?.[organizationId];
