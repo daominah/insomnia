@@ -247,19 +247,11 @@ export const Runner: FC<{}> = () => {
       return true;
     }
 
-    const index = requestRows.findIndex((row: RequestRow, index: number) => {
+    const changedItemIndex = requestRows.findIndex((row: RequestRow, index: number) => {
       return row.id !== reqList.items[index].id;
     });
 
-    return index === -1;
-    requestRows.forEach((row: RequestRow, index: number) => {
-      if (row.id !== reqList.items[index].id) {
-        changed = true;
-      }
-
-    });
-
-    return changed;
+    return changedItemIndex === -1;
   }, [requestRows, reqList]);
 
   const { dragAndDropHooks: requestsDnD } = useDragAndDrop({
